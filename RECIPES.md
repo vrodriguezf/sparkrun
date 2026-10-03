@@ -2,6 +2,11 @@
 
 A recipe is a YAML file defining an inference workload: model, container, runtime, configuration, and lifecycle hooks.
 
+Recipes are definitions, not installed model packages. `run` downloads missing
+weights; deleting a recipe does not delete that cache. Use `sparkrun model pull
+--recipe NAME` to prefetch without serving and `sparkrun model list` / `model remove`
+to manage retained weights. See [model storage](docs/MODELS.md).
+
 ```bash
 sparkrun run my-recipe --solo          # use defaults
 sparkrun run my-recipe -H host1,host2  # override hosts

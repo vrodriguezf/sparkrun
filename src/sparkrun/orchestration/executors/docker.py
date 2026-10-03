@@ -1163,6 +1163,7 @@ def _parse_docker_ps_output(stdout: str, host: str) -> tuple[list, int]:
                 status=entry.get("Status") or "",
                 image=entry.get("Image") or "",
                 allocations=decode_allocations(labels.get(ALLOCATION_LABEL)),
+                instance_id=container_id,
             )
         )
         if recipe_name and bucket["recipe_name"] is None:

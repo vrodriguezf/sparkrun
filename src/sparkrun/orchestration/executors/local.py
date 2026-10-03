@@ -693,7 +693,12 @@ class LocalExecutor(Executor):
             "    _allocation=\n"
             '    if _sr_local_read "$f.allocations" allocation; then _allocation=$_sr_value;\n'
             '    else _rc=$?; [ "$_rc" -eq 1 ] || exit "$_rc"; fi\n'
-            '    printf "%%s\\t%%s\\t%%s\\t%%s\\n" "$name" "$_sr_pid" "$_sr_owner" "$_allocation"\n'
+            "    _instance=\n"
+            '    if _stat=$(cat "/proc/$_sr_pid/stat" 2>/dev/null) && _boot=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null); then\n'
+            '      _fields=${_stat##*) }; read -r -a _fields <<< "$_fields"\n'
+            '      if [[ ${_fields[19]:-} =~ ^[0-9]+$ ]] && [ -n "$_boot" ]; then _instance="$_boot:$_sr_pid:${_fields[19]}"; fi\n'
+            "    fi\n"
+            '    printf "%%s\\t%%s\\t%%s\\t%%s\\t%%s\\n" "$name" "$_sr_pid" "$_sr_owner" "$_allocation" "$_instance"\n'
             '  else _rc=$?; [ "$_rc" -eq 1 ] || exit "$_rc"; fi\n'
             "done\n"
         ) % (pid_dir, pid_dir)
@@ -810,7 +815,8 @@ def _parse_local_pidfile_output(stdout: str) -> tuple[list, int]:
             continue
         name, _, rest = line.partition("\t")
         _pid, _, owner_and_allocation = rest.partition("\t")
-        owner, _, allocation_record = owner_and_allocation.partition("\t")
+        owner, _, allocation_and_instance = owner_and_allocation.partition("\t")
+        allocation_record, _, instance_id = allocation_and_instance.partition("\t")
         if not owns_resource(name, {OWNER_LABEL: owner} if owner else None):
             continue
         m = _PID_NAME_RE.match(name)
@@ -828,6 +834,7 @@ def _parse_local_pidfile_output(stdout: str) -> tuple[list, int]:
                 status="Up (pid %s)" % _pid,
                 image="(local process)",
                 allocations=decode_allocations(allocation_record),
+                instance_id=instance_id,
             )
         )
 

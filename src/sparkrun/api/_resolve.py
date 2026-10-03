@@ -94,6 +94,7 @@ def resolve_recipe(
     config: "SparkrunConfig | None" = None,
     overrides: dict | None = None,
     local_files: list[Path] | None = None,
+    offline: bool = False,
 ) -> "Recipe":
     """Return a resolved :class:`Recipe` from a name or pre-loaded object.
 
@@ -141,7 +142,10 @@ def resolve_recipe(
             raise RecipeNotFound("Recipe %r not found in any configured registry" % recipe_input)
         try:
             with _recipe_errors():
-                recipe = Recipe.load(recipe_path, resolve=False, registry_manager=registry_mgr)
+                if offline:
+                    recipe = Recipe.load(recipe_path, resolve=False, registry_manager=registry_mgr, offline=True)
+                else:
+                    recipe = Recipe.load(recipe_path, resolve=False, registry_manager=registry_mgr)
         except RegistryError as exc:
             # Ownership is decided while loading (it selects the recipe format);
             # an ambiguous or orphaned cache path is the same failure the

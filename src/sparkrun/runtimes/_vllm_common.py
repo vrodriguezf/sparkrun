@@ -348,6 +348,12 @@ class VllmRuntimeBase(RuntimePlugin):
 
         return base
 
+    def model_dependencies(self, recipe: Recipe) -> list:
+        from sparkrun.core.recipe import DistributionModelEntry
+
+        model, revision = self.detect_spec_config_draft(recipe)
+        return [DistributionModelEntry(name=model, revision=revision)] if model else []
+
     def detect_spec_config_draft(self, recipe: "Recipe") -> tuple[str | None, str | None]:
         """Return ``(draft_model, draft_revision)`` from ``speculative_config``.
 
@@ -361,7 +367,7 @@ class VllmRuntimeBase(RuntimePlugin):
             # TODO: support various ways that speculative config can be specified
             # noinspection PyProtectedMember
             spec_cfg = recipe._effective_default("speculative_config")
-            spec_cfg_dict = json.loads(spec_cfg) or {}
+            spec_cfg_dict = spec_cfg if isinstance(spec_cfg, dict) else json.loads(spec_cfg) or {}
             # intended primarily for dflash, but we allow any "model" field for future extensibility
             return spec_cfg_dict.get("model", None), spec_cfg_dict.get("revision", None)
         except Exception:

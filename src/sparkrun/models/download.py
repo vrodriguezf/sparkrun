@@ -431,13 +431,26 @@ def _snapshot_download(
         # this is exactly the payload it exists for.
         configure_hub_client()
 
-        enable_progress_bars()
+        from sparkrun.core.model_preparation import quiet_preparation
+
+        quiet = quiet_preparation.get()
+        if not quiet:
+            enable_progress_bars()
 
         kwargs: dict = {
             "repo_id": repo_id,
             "cache_dir": _hub_cache(cache),
             "token": token,
         }
+        if quiet:
+            from huggingface_hub.utils.tqdm import tqdm
+
+            class SilentProgress(tqdm):
+                def __init__(self, *args, **kwargs):
+                    kwargs["disable"] = True
+                    super().__init__(*args, **kwargs)
+
+            kwargs["tqdm_class"] = SilentProgress
         if revision:
             kwargs["revision"] = revision
         if allow_patterns:

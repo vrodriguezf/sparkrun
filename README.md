@@ -49,6 +49,16 @@ sparkrun status
 
 Ctrl+C detaches from logs — it never kills your inference job. Your model keeps serving.
 
+Downloaded weights remain after stopping a job or removing a recipe:
+
+```bash
+sparkrun model list --cluster mylab
+sparkrun model pull --recipe qwen3-1.7b-vllm --cluster mylab
+sparkrun model remove Qwen/Qwen3-1.7B --cluster mylab --dry-run
+```
+
+See [model storage](docs/MODELS.md) for deletion scope, helper setup, and safety limits.
+
 Watched launches also report Docker-start TTR and TTFT using a rank-local
 streaming readiness check for Docker vLLM/SGLang launches. By default, `run`
 follows startup logs and exits when ready; use `--follow` to stay attached,

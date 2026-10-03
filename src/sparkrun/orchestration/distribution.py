@@ -209,7 +209,9 @@ def _distribute_from_head(
 
     # Default verbosity captures silently; INFO+ streams to terminal so long-running
     # operations (model downloads, image pulls) show progress instead of hanging mute.
-    _quiet = not logging.getLogger().isEnabledFor(logging.INFO)
+    from sparkrun.core.model_preparation import quiet_preparation
+
+    _quiet = quiet_preparation.get() or not logging.getLogger().isEnabledFor(logging.INFO)
 
     # Step 1: ensure resource on head
     ensure_result = run_remote_script_streaming(

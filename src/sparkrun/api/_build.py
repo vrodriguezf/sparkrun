@@ -10,6 +10,7 @@ from typing import Any
 from sparkrun.api._build_models import BuildOptions, BuildPlan, BuildResult
 from sparkrun.api._context import resolve_sctx
 from sparkrun.api._errors import HostsUnreachable, IntegrationUnavailable, SparkrunError, TrustRejected
+from sparkrun.core.model_storage_locks import guarded_operation, reserve_launch
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,7 @@ def build(options: BuildOptions, *, plan: BuildPlan | None = None, sctx=None) ->
     return replace(result, timeline=timeline.export())
 
 
+@guarded_operation
 def _prepare(options: BuildOptions, *, plan: BuildPlan, sctx, timeline) -> BuildResult:
     from sparkrun.core.asset_preparation import prepare_tuning
     from sparkrun.core.build_preparation import BuildContext, prepare_build_context
@@ -166,6 +168,17 @@ def _prepare(options: BuildOptions, *, plan: BuildPlan, sctx, timeline) -> Build
         dry_run=options.dry_run,
         topology=topology,
         mgmt_interface=cluster.mgmt_interface,
+    )
+
+    reserve_launch(
+        recipe,
+        runtime,
+        hosts,
+        effective_cache,
+        local_cache,
+        ssh_kwargs,
+        include_local=transfer.mode in {"local", "push"} or transfer.auto_delegated,
+        dry_run=options.dry_run,
     )
 
     with timed(timeline, "build.environment"):

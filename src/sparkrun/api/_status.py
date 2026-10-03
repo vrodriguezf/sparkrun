@@ -26,6 +26,7 @@ def status(
     cluster: "str | ClusterDefinition | None" = None,
     ssh_kwargs: dict | None = None,
     sctx: "SparkrunContext | None" = None,
+    read_only: bool = False,
 ) -> "ClusterStatus":
     """Return a :class:`ClusterStatus` snapshot of *hosts*.
 
@@ -43,6 +44,7 @@ def status(
             Explicit None/empty values clear that configured key.
         sctx: Optional shared :class:`SparkrunContext`.  Provides
             cluster manager + SAF variables for chained-call sharing.
+        read_only: Do not persist the shell-completion running snapshot.
 
     Returns:
         A :class:`ClusterStatus` snapshot.  Unreachable hosts are
@@ -75,7 +77,8 @@ def status(
         config=config,
         v=v,
     )
-    _record_running_snapshot(snapshot, sctx)
+    if not read_only:
+        _record_running_snapshot(snapshot, sctx)
     return snapshot
 
 

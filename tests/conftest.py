@@ -18,6 +18,26 @@ _REAL_CLONE_OR_PULL = RegistryManager._clone_or_pull
 
 
 @pytest.fixture(autouse=True)
+def isolate_storage_reservations(request, monkeypatch):
+    """Legacy launch tests mock transfers; don't open real cache/SSH guards.
+
+    The dedicated storage tests exercise this boundary, including subprocess
+    exclusion. Other tests keep their existing mocked-launch contract.
+    """
+    if request.node.path.name.startswith(("test_model_storage", "test_api_model", "test_cli_model")):
+        return
+    from contextlib import nullcontext
+    from sparkrun.core import model_storage_locks
+    from sparkrun.core import launcher
+    from sparkrun.api import _build
+
+    monkeypatch.setattr(model_storage_locks, "protect_caches", lambda *args, **kwargs: nullcontext())
+    monkeypatch.setattr(model_storage_locks, "reserve_recipe_launch", lambda *args, **kwargs: None)
+    monkeypatch.setattr(launcher, "reserve_launch", lambda *args, **kwargs: None)
+    monkeypatch.setattr(_build, "reserve_launch", lambda *args, **kwargs: None)
+
+
+@pytest.fixture(autouse=True)
 def isolate_stateful(tmp_path: Path, monkeypatch):
     """Redirect SAF stateful root to temp dir for test isolation.
 

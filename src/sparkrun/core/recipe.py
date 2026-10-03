@@ -766,6 +766,7 @@ def _load_foreign_format(
     known_format: str | None = None,
     *,
     allow_local: bool = True,
+    offline: bool = False,
 ) -> tuple[dict[str, Any], str] | None:
     """``(v2 data, recipe name)`` when *path* is a foreign-format manifest, else ``None``.
 
@@ -812,7 +813,7 @@ def _load_foreign_format(
     if recipe_format is None:
         return None
     try:
-        translated = recipe_format.load(path, registry_manager=registry_manager, offline=False, allow_local=allow_local)
+        translated = recipe_format.load(path, registry_manager=registry_manager, offline=offline, allow_local=allow_local)
     except RecipeError:
         raise
     except Exception as error:
@@ -1690,6 +1691,7 @@ class Recipe:
         registry_manager: RegistryManager | None = None,
         allow_local_includes: bool = True,
         recipe_format: str | None = None,
+        offline: bool = False,
     ) -> Recipe:
         """Load a recipe from a YAML file path.
 
@@ -1706,6 +1708,7 @@ class Recipe:
             recipe_format: The owning registry's ``format`` when the caller
                 already knows it. Otherwise it is looked up through
                 *registry_manager*, or claimed by content for a direct path.
+            offline: Ask foreign-format loaders to use only local metadata.
         """
         from sparkrun.core.recipe_include import resolve_recipe_includes
 
@@ -1715,7 +1718,7 @@ class Recipe:
         data = read_yaml(str(path))
         if not isinstance(data, dict):
             raise RecipeError("Recipe file must contain a YAML mapping: %s" % path)
-        foreign = _load_foreign_format(path, data, registry_manager, recipe_format, allow_local=allow_local_includes)
+        foreign = _load_foreign_format(path, data, registry_manager, recipe_format, allow_local=allow_local_includes, offline=offline)
         if foreign is not None:
             data, foreign_name = foreign
             recipe = cls(data, source_path=str(path))

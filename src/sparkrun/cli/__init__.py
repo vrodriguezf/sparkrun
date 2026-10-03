@@ -24,6 +24,7 @@ from ._build import build
 from ._benchmark import benchmark
 from ._cluster import cluster, cluster_status
 from ._export import export
+from ._model import model, setup_model_storage
 from ._proxy import proxy
 from ._recipe import recipe, recipe_list, recipe_search, recipe_show
 from ._registry import registry, registry_update
@@ -87,6 +88,8 @@ main.add_command(tune)
 main.add_command(cluster)
 main.add_command(adv)
 main.add_command(recipe)
+main.add_command(model)
+setup.add_command(setup_model_storage)
 main.add_command(registry)
 main.add_command(benchmark)
 main.add_command(export)

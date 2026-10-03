@@ -177,6 +177,10 @@ def create_pending_op(
         "job_cluster_id": job_cluster_id,
         "cluster": cluster,
     }
+    from sparkrun.core.model_storage_locks import _operation_id
+
+    if storage_operation := _operation_id.get():
+        info["storage_operation"] = storage_operation
 
     path = _lock_path(d, cluster_id, operation)
     try:
@@ -266,12 +270,15 @@ def pending_op(
         )
 
 
-def list_pending_ops(cache_dir: str | None = None) -> list[dict]:
+def list_pending_ops(cache_dir: str | None = None, *, read_only: bool = False) -> list[dict]:
     """Return all live pending operations, pruning stale ones.
 
     A lock is considered stale when it exceeds :data:`LOCK_MAX_AGE_SECONDS`
     or (for same-host locks) when the owning PID is no longer running — see
     :func:`_is_stale`.  Stale and corrupt locks are silently deleted.
+
+    With ``read_only=True`` preserve every file and return stale/invalid
+    records as uncertainty instead; storage previews must never prune them.
     """
     d = _pending_dir(cache_dir)
     if not d.is_dir():
@@ -282,6 +289,9 @@ def list_pending_ops(cache_dir: str | None = None) -> list[dict]:
         try:
             info = json.loads(path.read_text())
         except (OSError, json.JSONDecodeError):
+            if read_only:
+                ops.append({"operation": "unknown", "error": "Unreadable pending operation", "path": str(path)})
+                continue
             # Corrupt lock — remove it
             try:
                 path.unlink(missing_ok=True)
@@ -290,6 +300,9 @@ def list_pending_ops(cache_dir: str | None = None) -> list[dict]:
             continue
 
         if _is_stale(info):
+            if read_only:
+                ops.append({**info, "stale": True})
+                continue
             logger.debug(
                 "Pruning stale pending-op lock: %s (pid=%s host=%s)",
                 path.name,

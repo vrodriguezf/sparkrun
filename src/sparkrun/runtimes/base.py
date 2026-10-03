@@ -621,6 +621,14 @@ class RuntimePlugin(Plugin, ABC):
         """
         raise NotImplementedError("%s does not implement native clustering" % type(self).__name__)
 
+    def model_dependencies(self, recipe: Recipe) -> list:
+        """Pure downloadable model inputs, independent of image/runtime setup.
+
+        Return DistributionModelEntry objects; never mutate the recipe or query
+        hosts here. Used by both launches and `model pull --recipe`.
+        """
+        return []
+
     def prepare(
         self,
         recipe: Recipe,

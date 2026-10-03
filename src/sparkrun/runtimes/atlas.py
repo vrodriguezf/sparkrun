@@ -335,6 +335,13 @@ class AtlasRuntime(RuntimePlugin):
     def get_common_env(self):
         return default_env_hf_offline()
 
+    def model_dependencies(self, recipe: Recipe) -> list:
+        from sparkrun.core.recipe import DistributionModelEntry
+
+        model = recipe._effective_default("draft_model")
+        revision = recipe._effective_default("draft_model_revision")
+        return [DistributionModelEntry(name=str(model), revision=str(revision) if revision else None)] if model else []
+
     def prepare(
         self,
         recipe: Recipe,
@@ -345,12 +352,8 @@ class AtlasRuntime(RuntimePlugin):
         overrides: dict[str, Any] | None = None,
     ) -> None:
         """Pre-sync the speculative draft model when configured."""
-        # noinspection PyProtectedMember
-        draft_model = recipe._effective_default("draft_model")
-        if draft_model:
-            # noinspection PyProtectedMember
-            draft_revision = recipe._effective_default("draft_model_revision")
-            recipe.distribution_config.add_model(str(draft_model), revision=str(draft_revision) if draft_revision else None)
+        for entry in self.model_dependencies(recipe):
+            recipe.distribution_config.add_model(entry.name, revision=entry.revision)
 
     # --- Command generation ---
 

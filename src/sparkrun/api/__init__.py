@@ -35,6 +35,8 @@ field additions are non-breaking, field removals are breaking.
 
 from __future__ import annotations
 
+from sparkrun.api import model
+
 from sparkrun.api import proxy
 from sparkrun.api import setup
 from sparkrun.api import tailscale
@@ -135,6 +137,7 @@ from sparkrun.api._catalog import (
 )
 
 __all__ = [
+    "model",
     # Catalog payload types
     "CatalogBenchmarkContext",
     "CatalogCapacity",

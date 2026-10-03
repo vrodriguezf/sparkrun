@@ -141,6 +141,54 @@ def format_recipe_table(
     return "\n".join(lines)
 
 
+def format_model_storage_table(rows: list[dict[str, str]], *, show_revisions: bool = False) -> str:
+    """Render prepared cache rows in the same plain-text style as recipes.
+
+    Host/cache context is printed separately by the caller. Preserve full IDs
+    and hashes, including when output is redirected to a file.
+    """
+    if not rows:
+        return "  No cached models found."
+    columns = [
+        ("model", "Model"),
+        ("size", "Attributed size"),
+        ("disk", "Disk usage"),
+        ("revisions", "Revisions"),
+        ("state", "Cache state"),
+        ("usage", "Usage (managed)"),
+        ("origin", "Origin"),
+    ]
+    if show_revisions:
+        columns.extend([("commit", "Commit"), ("refs", "Refs")])
+    return _format_storage_rows(rows, columns)
+
+
+def format_model_removal_table(rows: list[dict[str, str]]) -> str:
+    """One row per host/cache for a model, including failed observations."""
+    return _format_storage_rows(
+        rows,
+        [
+            ("host", "Host"),
+            ("condition", "Cache condition"),
+            ("contents", "Contents found"),
+            ("disk", "Disk usage"),
+            ("reclaim", "Est. reclaimable"),
+            ("action", "Action"),
+            ("usage", "Usage (managed)"),
+        ],
+    )
+
+
+def _format_storage_rows(rows, columns):
+    widths = [max(len(title), *(len(row[key]) for row in rows)) for key, title in columns]
+
+    def render(values):
+        return "  " + "  ".join(value.ljust(width) for value, width in zip(values, widths, strict=True)).rstrip()
+
+    header = render([title for _, title in columns])
+    return "\n".join([header, "  " + "-" * (len(header) - 2), *(render([row[key] for key, _ in columns]) for row in rows)])
+
+
 def format_job_label(meta: dict[str, Any], cluster_id: str) -> str:
     """Format a display label from job metadata."""
     short_id = cluster_id.removeprefix("sparkrun_")  # [:8]

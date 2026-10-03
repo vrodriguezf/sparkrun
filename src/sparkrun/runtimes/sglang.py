@@ -299,6 +299,12 @@ class SglangRuntime(RuntimePlugin):
         """
         return resolve_api_key(recipe, overrides, "SGLANG_API_KEY", "--api-key")
 
+    def model_dependencies(self, recipe: Recipe) -> list:
+        from sparkrun.core.recipe import DistributionModelEntry
+
+        model = self._detect_speculative_draft_model(recipe)
+        return [DistributionModelEntry(name=model, revision=self._detect_speculative_draft_revision(recipe))] if model else []
+
     def prepare(
         self,
         recipe: Recipe,
@@ -309,9 +315,8 @@ class SglangRuntime(RuntimePlugin):
         overrides: dict[str, Any] | None = None,
     ) -> None:
         """Pre-sync the speculative draft model when configured."""
-        draft_model = self._detect_speculative_draft_model(recipe)
-        if draft_model:
-            recipe.distribution_config.add_model(draft_model, revision=self._detect_speculative_draft_revision(recipe))
+        for entry in self.model_dependencies(recipe):
+            recipe.distribution_config.add_model(entry.name, revision=entry.revision)
 
     @staticmethod
     def _detect_speculative_draft_model(recipe: "Recipe") -> str | None:

@@ -553,7 +553,7 @@ class ClusterStatusResult:
 class ClusterManager:
     """Manages named cluster definitions stored as YAML files."""
 
-    def __init__(self, config_root: Path) -> None:
+    def __init__(self, config_root: Path, *, read_only: bool = False) -> None:
         """Initialize cluster manager.
 
         Args:
@@ -561,11 +561,13 @@ class ClusterManager:
                 Cluster files will be stored in config_root/clusters/.
         """
         self.config_root = Path(config_root)
+        self.read_only = read_only
         self.clusters_dir = self.config_root / "clusters"
         self.default_file = self.clusters_dir / ".default"
 
         # Ensure clusters directory exists
-        self.clusters_dir.mkdir(parents=True, exist_ok=True)
+        if not read_only:
+            self.clusters_dir.mkdir(parents=True, exist_ok=True)
         logger.debug("ClusterManager initialized with clusters_dir: %s", self.clusters_dir)
 
     def _validate_name(self, name: str) -> None:
@@ -932,6 +934,8 @@ class ClusterManager:
         # Verify cluster still exists
         cluster_path = self._cluster_path(default_name)
         if not cluster_path.exists():
+            if self.read_only:
+                return default_name  # caller can report the broken selection without repairing it
             logger.warning("Default cluster '%s' no longer exists, clearing default", default_name)
             self.unset_default()
             return None

@@ -18,6 +18,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Callable, Mapping
 
 from sparkrun.core.progress import PROGRESS
+from sparkrun.core.model_storage_locks import guarded_operation, reserve_launch
 from sparkrun.core.timing import ROOT as TIMELINE_ROOT, STATUS_ERROR, Timeline, timed
 from sparkrun.core.readiness import DEFAULT_PORT_READY_TIMEOUT_S, DEFAULT_HEALTH_READY_TIMEOUT_S, resolve_readiness_settings
 from sparkrun.core.readiness import (
@@ -82,6 +83,9 @@ class LaunchResult:
     timeline, so a consumer reading it after readiness sees the whole
     launch-to-serving story."""
     startup_observation: dict[str, Any] = field(default_factory=dict)
+    storage_target: dict[str, Any] = field(default_factory=dict)
+    """Resolved host executor destination for model-usage handoff."""
+    storage_detached: bool = True
 
 
 def resolve_recipe_trust(
@@ -843,6 +847,7 @@ def resolve_per_host_backends(
     return backends
 
 
+@guarded_operation
 def launch_inference(
     *,
     recipe: Recipe,
@@ -1154,6 +1159,17 @@ def launch_inference(
         **({"observed_ib": observed_ib} if observed_ib is not None else {}),
     )
     effective_transfer_mode = transfer_result.mode
+
+    reserve_launch(
+        recipe,
+        runtime,
+        host_list,
+        effective_cache_dir,
+        effective_local_cache,
+        ssh_kwargs,
+        include_local=effective_transfer_mode in {"local", "push"} or transfer_result.auto_delegated,
+        dry_run=dry_run,
+    )
 
     # Derive the deterministic cluster_id from recipe + (trimmed) hosts.
     #
@@ -1648,6 +1664,8 @@ def launch_inference(
             serve_command=serve_command,
             runtime_info=runtime_info,
             startup_observation=dict(getattr(activation_result, "startup_observation", {}) or {}),
+            storage_target=target.to_dict(),
+            storage_detached=detached,
             builder=builder,
             backends=backends,
             timeline=timeline,
@@ -1867,6 +1885,8 @@ def launch_inference(
         overrides=overrides,
         container_image=container_image,
         effective_cache_dir=effective_cache_dir,
+        storage_target=target.to_dict(),
+        storage_detached=detached,
         serve_port=serve_port,
         config=config,
         recipe_ref=recipe_ref,

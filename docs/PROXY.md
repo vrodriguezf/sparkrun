@@ -115,6 +115,11 @@ Unload uses the shared stop API. Failed or ambiguous stops retain the proxy
 registration. Successful stops remove the registration and sync models when the
 proxy is running; if it is stopped, its saved registration remains unchanged.
 
+Unloading keeps downloaded model weights. Inspect retained files with
+`sparkrun model list --cluster mylab`, then preview explicit removal with
+`sparkrun model remove REPO_ID --cluster mylab --dry-run`. Storage is independent of
+the LiteLLM/SparkRoute endpoint registry; see [model storage](MODELS.md).
+
 ### Aliases
 
 ```bash

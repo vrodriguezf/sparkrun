@@ -12,6 +12,24 @@ first tagged release containing them, regardless of their original commit date.
 
 ### 0.4.0 application and API changes
 
+- Added `sparkrun model list`, `show`, `pull` and `remove`, plus the
+  console-free `api.model` surface. Inventory is filesystem-based; prefetch
+  stages weights without images, serving or GPU scheduling. Removal supports
+  repository/revision previews, confirmation, cache guards, live usage checks,
+  path/fingerprint validation and post-delete verification. Launch/build/pull
+  preparations publish durable reservations and receipts. Added per-model,
+  managed-only usage from live executor identities and
+  target-side launch bindings, including draft dependencies. Unrelated SSH/PAM
+  processes no longer block removal; unverifiable jobs still do. Added pinned helper
+  setup without a global `hf` CLI requirement. Shared-blob/shared-filesystem
+  deletion and selective GGUF removal remain explicitly unsupported; see
+  [model storage](docs/MODELS.md).
+  Whole-model removal now also handles safely identified damaged/incomplete
+  caches, with per-host tables showing physical contents, metadata condition,
+  disk usage and estimated reclamation. Broken refs no longer hide retained
+  weights. Revision-only removal never expands to the whole repository, and
+  blocked/unreachable nodes remain visible in the preview.
+
 - Fixed model distribution transferring no weights when a host's HF cache uses
   huggingface_hub's shared blob store (1.32 and later, on by default): both
   transfer paths now pass `--copy-unsafe-links`, materialising the blob links

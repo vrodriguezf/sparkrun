@@ -1109,7 +1109,7 @@ class RegistryManager:
     with sparse checkouts, and provides recipe discovery across all registries.
     """
 
-    def __init__(self, config_root: Path, cache_root: Path | None = None) -> None:
+    def __init__(self, config_root: Path, cache_root: Path | None = None, *, read_only: bool = False) -> None:
         """Initialize the registry manager.
 
         Args:
@@ -1118,10 +1118,12 @@ class RegistryManager:
         """
         self.config_root = Path(config_root)
         self.cache_root = Path(cache_root) if cache_root else resolve_sparkrun_cache_dir() / "registries"
-        self.config_root.mkdir(parents=True, exist_ok=True)
-        self.cache_root.mkdir(parents=True, exist_ok=True)
-        self._manifest_discovery_attempted = False
         self._bootstrap_failures: dict[str, str] = {}
+        self.read_only = read_only
+        if not read_only:
+            self.config_root.mkdir(parents=True, exist_ok=True)
+            self.cache_root.mkdir(parents=True, exist_ok=True)
+        self._manifest_discovery_attempted = read_only
 
     @property
     def _registries_path(self) -> Path:
@@ -1716,6 +1718,8 @@ class RegistryManager:
         Returns:
             List of registry entries, or default registries if config doesn't exist
         """
+        if self.read_only and self._registries_path.exists():
+            return self._apply_plugin_overlay(self._load_registries_from_file())
         if not self._registries_path.exists():
             logger.debug("No registries.yaml found, using defaults")
             return self._default_registries(allow_discovery=allow_discovery)
@@ -2706,6 +2710,8 @@ class RegistryManager:
         Automatic discovery keeps its once-per-manager limit; this does not
         perform the explicit update operation's retry.
         """
+        if self.read_only:
+            return
         registries = self._load_registries()
         needs_init = False
 

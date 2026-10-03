@@ -51,6 +51,9 @@ class ContainerDetail:
     allocations: tuple[GpuAllocation, ...] = ()
     """Worker-persisted reservations; empty means legacy/unknown, never shared."""
 
+    instance_id: str = ""
+    """Backend instance identity, not a reusable workload name (storage safety)."""
+
 
 @dataclass(frozen=True)
 class RunningWorkload:

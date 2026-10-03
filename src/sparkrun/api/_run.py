@@ -44,6 +44,7 @@ from sparkrun.api._errors import (
     SparkrunError,
 )
 from sparkrun.api._models import RunOptions, RunPlan, RunResult
+from sparkrun.core.model_storage_locks import guarded_operation
 
 if TYPE_CHECKING:
     from sparkrun.core.context import SparkrunContext
@@ -456,6 +457,7 @@ def _apply_recipe_overrides_for_plan(recipe, options: RunOptions, *, runtime, cl
     return resolution
 
 
+@guarded_operation
 def run(options: RunOptions, *, sctx: "SparkrunContext | None" = None, plan: RunPlan | None = None) -> RunResult:
     """Launch the workload described by *options* and return a :class:`RunResult`.
 
@@ -549,6 +551,12 @@ def run(options: RunOptions, *, sctx: "SparkrunContext | None" = None, plan: Run
     if any(getattr(recipe, name, None) for name in ("pre_exec", "post_exec", "post_commands")):
         if not resolve_recipe_trust(recipe, options.trust, sctx=sctx):
             raise SparkrunError("Recipe hooks require explicit authorization: pass RunOptions(trust=True) (CLI: --trust).")
+
+    # Protect strategy preparation as well as the common launcher. Provider
+    # volumes have separate adapters and never authorize host-cache removal.
+    from sparkrun.core.model_storage_locks import reserve_recipe_launch
+
+    reserve_recipe_launch(recipe, runtime, host_list, options, cluster_def, sctx)
 
     # Recipe-owned execution strategies are selected only from top-level items
     # present in this recipe.  Preparation happens before the shared launcher
